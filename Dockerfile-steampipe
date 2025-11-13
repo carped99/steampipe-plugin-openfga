@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.25 as builder
+
+ENV CGO_ENABLED=0 \
+#    GOOS=$TARGETOS \
+#    GOARCH=$TARGETARCH \
+    GOTOOLCHAIN=auto
+
+ENV GOFLAGS="-mod=readonly -trimpath -buildvcs=false"
+ENV LDFLAGS="-s -w \
+      -X github.com/gaia3d/gmr/internal/buildinfo.Version=${VERSION} \
+      -X github.com/gaia3d/gmr/internal/buildinfo.BuildDate=${BUILD_DATE} \
+      -X github.com/gaia3d/gmr/internal/buildinfo.Commit=${COMMIT}"
+
+WORKDIR /src
+
+COPY config /out/
+
+# steampipe 플러그인은 main.go 기준으로 .plugin 바이너리 빌드
+# Download dependencies
+RUN --mount=type=cache,target=/root/go/pkg/mod \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    go mod download
+
+# Build
+RUN --mount=type=cache,target=/root/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=bind,target=. \
+    go build -o /out/steampipe-plugin-acl.plugin .
+
+# 2단계: steampipe 이미지에 플러그인만 심기
+FROM ubuntu:24.04
+
+# 기본 도구 설치
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    rsync \
+    git \
+    wget \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Steampipe 설치
+# Steampipe CLI는 비루트(non-root) 유저에서 실행되어야 함
+RUN useradd -ms /bin/bash steampipe \
+    && /bin/sh -c "$(curl -fsSL https://steampipe.io/install/steampipe.sh)"
+
+USER steampipe
+
+COPY --chown=steampipe:steampipe --from=builder /out/acl.spc \
+  /home/steampipe/.steampipe/config/acl.spc
+
+COPY --chown=steampipe:steampipe --from=builder /out/steampipe-plugin-acl.plugin \
+  /home/steampipe/.steampipe/plugins/local/gaia3d/acl/steampipe-plugin-acl.plugin

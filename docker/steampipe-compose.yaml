@@ -1,0 +1,7 @@
+name: acl
+
+include:
+  - ./database/docker-compose.yaml
+  - ./openfga/docker-compose.yaml
+
+

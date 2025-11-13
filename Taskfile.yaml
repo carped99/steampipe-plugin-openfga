@@ -1,0 +1,66 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build Docker steampipe image
+    cmds:
+      - docker build -f "{{.ROOT_DIR}}/Dockerfile-steampipe" -t steampipe-acl "{{.ROOT_DIR}}"
+      - echo "✅ Docker image built successfully"
+
+  run:
+    desc: Run Docker steampipe image
+    deps: [ build ]
+    cmds:
+      - docker run --rm -it steampipe-acl
+
+  up:
+    desc: Run Docker steampipe image
+    cmds:
+      - docker compose -f "{{.ROOT_DIR}}/docker/steampipe-compose.yaml" up -d
+
+  standalone:
+    desc: Build standalone PostgreSQL FDW image
+    cmds:
+      - docker build -f "{{.ROOT_DIR}}/Dockerfile-standalone" -t steampipe-acl-fdw "{{.ROOT_DIR}}"
+      - echo "✅ Standalone FDW image built successfully"
+      - echo ""
+      - echo "To run:"
+      - echo "  task standalone:up"
+      - echo "  psql -h localhost -U steampipe -d steampipe"
+
+#  standalone:up:
+#    desc: Start standalone FDW stack with docker-compose
+#    deps: [ standalone ]
+#    cmds:
+#      - docker compose -f "{{.ROOT_DIR}}/docker/docker-compose-standalone.yaml" up -d
+#      - echo "✅ Standalone FDW stack started"
+#      - echo ""
+#      - echo "Connection info:"
+#      - echo "  Host:     localhost"
+#      - echo "  Port:     5432"
+#      - echo "  Database: steampipe"
+#      - echo "  User:     steampipe"
+#      - echo "  Password: steampipe"
+#      - echo ""
+#      - echo "Test connection:"
+#      - echo "  psql -h localhost -U steampipe -d steampipe"
+#
+#  standalone:down:
+#    desc: Stop standalone FDW stack
+#    cmds:
+#      - docker compose -f "{{.ROOT_DIR}}/docker/docker-compose-standalone.yaml" down
+#
+#  standalone:logs:
+#    desc: View standalone FDW logs
+#    cmds:
+#      - docker compose -f "{{.ROOT_DIR}}/docker/docker-compose-standalone.yaml" logs -f
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./... -v
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - OPENFGA_API_URL=http://localhost:8080 OPENFGA_STORE_ID={{.OPENFGA_STORE_ID}} go test ./acl/... -v -run Integration

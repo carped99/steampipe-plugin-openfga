@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # OpenFGA server (for testing)
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    ports:
+      - "8080:8080"  # HTTP API
+      - "8081:8081"  # gRPC API
+      - "3000:3000"  # Playground
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=memory
+      - OPENFGA_LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acl-network
+
+  # PostgreSQL with Steampipe FDW
+  postgres-fdw:
+    build:
+      context: ..
+      dockerfile: Dockerfile-standalone
+    container_name: steampipe-postgres-fdw
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=steampipe
+      - POSTGRES_USER=steampipe
+      - POSTGRES_PASSWORD=steampipe
+      - OPENFGA_API_URL=http://openfga:8080
+      - OPENFGA_STORE_ID=${OPENFGA_STORE_ID:-01K9Y2QSETQJE22F1BNEJ3ZWTM}
+    depends_on:
+      openfga:
+        condition: service_healthy
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../config/acl.spc:/home/steampipe/.steampipe/config/acl.spc:ro
+    networks:
+      - acl-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U steampipe"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+
+networks:
+  acl-network:
+    driver: bridge
