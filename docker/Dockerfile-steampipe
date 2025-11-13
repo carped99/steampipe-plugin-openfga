@@ -1,0 +1,48 @@
+FROM golang:1.25 as builder
+
+ENV CGO_ENABLED=0 \
+    GOTOOLCHAIN=auto \
+    GOFLAGS="-mod=readonly -trimpath -buildvcs=false"
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . .
+
+# Build
+RUN --mount=type=cache,target=/root/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w" -o steampipe-plugin-openfga.plugin .
+
+# 2단계: steampipe 이미지에 플러그인만 심기
+FROM ubuntu:24.04
+
+# 기본 도구 설치
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    rsync \
+    git \
+    wget \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Steampipe 설치
+# Steampipe CLI는 비루트(non-root) 유저에서 실행되어야 함
+RUN useradd -ms /bin/bash steampipe \
+    && /bin/sh -c "$(curl -fsSL https://steampipe.io/install/steampipe.sh)"
+
+USER steampipe
+
+COPY --chown=steampipe:steampipe --from=builder /src/config/openfga.spc \
+  /home/steampipe/.steampipe/config/openfga.spc
+
+COPY --chown=steampipe:steampipe --from=builder /src/steampipe-plugin-openfga.plugin \
+  /home/steampipe/.steampipe/plugins/local/carped99/openfga/steampipe-plugin-openfga.plugin

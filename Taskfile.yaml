@@ -4,7 +4,7 @@ tasks:
   build:
     desc: Build Docker steampipe image
     cmds:
-      - docker build -f "{{.ROOT_DIR}}/Dockerfile-steampipe" -t steampipe-acl "{{.ROOT_DIR}}"
+      - docker build -f "{{.ROOT_DIR}}/docker/Dockerfile-steampipe" -t steampipe-acl "{{.ROOT_DIR}}"
       - echo "✅ Docker image built successfully"
 
   run:
