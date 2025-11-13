@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gaia3d/steampipe-plugin-acl/acl"
+	"github.com/carped99/steampipe-plugin-openfga/acl"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 )
 

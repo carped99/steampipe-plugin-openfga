@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # 1단계: steampipe-postgres-fdw + plugin 을 빌드하는 builder
 # ------------------------------------------------------------
-FROM postgres:16-bookworm
+FROM ubuntu:24.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -18,7 +18,6 @@ ARG PLUGIN_NAME=acl
 ARG PLUGIN_VERSION="v0.0.1"
 ARG PLUGIN_GITHUB_URL=github.com/carped99/steampipe-plugin-openfga
 ARG GO_VERSION=1.25.4
-
 
 # Go 설치
 RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
@@ -35,4 +34,4 @@ WORKDIR /src/steampipe-postgres-fdw
 
 # RUN go get "${PLUGIN_GITHUB_URL}"
 
-RUN make standalone plugin="${PLUGIN_NAME}" plugin_github_url="${PLUGIN_GITHUB_URL}"
+# RUN make standalone plugin="openfga" plugin_github_url="github.com/carped99/steampipe-plugin-openfga"
