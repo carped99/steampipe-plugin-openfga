@@ -1,4 +1,4 @@
-package acl
+package openfga
 
 import (
 	"context"
