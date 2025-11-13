@@ -24,8 +24,3 @@ go.work
 # OS
 .DS_Store
 Thumbs.db
-
-# Config with secrets
-config/*
-!config/*.spc.example
-*.spc
