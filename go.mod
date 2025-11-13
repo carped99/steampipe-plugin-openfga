@@ -141,6 +141,3 @@ require (
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
-
-
-replace github.com/turbot/steampipe-plugin-openfga => github.com/carped99/steampipe-plugin-openfga v0.0.1
