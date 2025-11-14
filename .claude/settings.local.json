@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(go mod tidy:*)",
+      "WebSearch",
+      "Bash(go test:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(go list:*)",
+      "Bash(go get:*)",
+      "Bash(go run:*)",
+      "Bash(set OPENFGA_STORE_ID=01KA0FSR3W39HES8PTRXA4PDYP:*)",
+      "Bash($env:OPENFGA_STORE_ID=\"01KA0FSR3W39HES8PTRXA4PDYP\")",
+      "Bash(export OPENFGA_STORE_ID=\"01KA0FSR3W39HES8PTRXA4PDYP\")",
+      "Bash(go generate:*)",
+      "Bash(task testdata)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

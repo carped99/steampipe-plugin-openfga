@@ -46,7 +46,7 @@ func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 
 	cfg := getConfig(d.Connection)
 
-	client, err := newClient(ctx, cfg)
+	client, err := NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,8 @@ func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 	return client, nil
 }
 
-func newClient(ctx context.Context, cfg Config) (*Client, error) {
+// NewClient creates a new OpenFGA client with the given configuration
+func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	// Validate endpoint
 	if cfg.Endpoint == "" {
 		return nil, fmt.Errorf("endpoint is required in connection config")

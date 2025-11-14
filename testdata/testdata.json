@@ -1,0 +1,19 @@
+{
+  "connection": {
+    "endpoint": "localhost:8081",
+    "store_id": "01KA0FSR3W39HES8PTRXA4PDYP"
+  },
+  "generation": {
+    "users": 10000,
+    "docs": 10000,
+    "folders": 10000
+  },
+  "tuples": {
+    "relations": ["viewer", "owner"]
+  },
+  "output": {
+    "show_samples": true,
+    "sample_size": 5,
+    "verbose": true
+  }
+}

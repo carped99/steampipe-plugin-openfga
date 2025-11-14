@@ -57,6 +57,12 @@ tasks:
 #    cmds:
 #      - docker compose -f "{{.ROOT_DIR}}/docker/docker-compose-standalone.yaml" logs -f
 
+  testdata:
+    desc: Generate test data using testdata.json configuration
+    dir: "{{.ROOT_DIR}}/testdata"
+    cmds:
+      - go run generator.go testdata_generator.go
+
   test:
     desc: Run tests
     cmds:

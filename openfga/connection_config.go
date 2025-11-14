@@ -48,9 +48,9 @@ func getConfig(connection *plugin.Connection) Config {
 	if connection == nil || connection.Config == nil {
 		return Config{}
 	}
-	config, ok := connection.Config.(*Config)
+	config, ok := connection.Config.(Config)
 	if !ok {
 		return Config{}
 	}
-	return *config
+	return config
 }

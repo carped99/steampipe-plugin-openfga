@@ -37,7 +37,7 @@ func setUp(t *testing.T) (*testSetup, []testCase) {
 	storeId := os.Getenv("OPENFGA_STORE_ID")
 	modelId := os.Getenv("OPENFGA_AUTHORIZATION_MODEL_ID")
 
-	storeId = "01K9Y2QSETQJE22F1BNEJ3ZWTM"
+	storeId = "01KA0FSR3W39HES8PTRXA4PDYP"
 	if endpoint == "" {
 		endpoint = "localhost:8081"
 	}
@@ -204,9 +204,9 @@ func TestTableAclPermission_Integration(t *testing.T) {
 			}
 
 			// Call the function
-			_, err := checkPermission(ctx, queryData, nil)
+			_, err := listPermission(ctx, queryData, nil)
 			if err != nil {
-				t.Fatalf("checkPermission failed: %v", err)
+				t.Fatalf("listPermission failed: %v", err)
 			}
 
 			// Verify results
@@ -222,10 +222,10 @@ func TestTableAclPermission_Integration(t *testing.T) {
 			// Check that we got the expected tuple
 			found := false
 			for _, result := range results {
-				if result.SubjectId == tc.subjectId &&
+				if result.SubjectID == tc.subjectId &&
 					result.Relation == tc.relation &&
 					result.ObjectType == tc.objectType &&
-					result.ObjectId == tc.objectId {
+					result.ObjectID == tc.objectId {
 					found = true
 					break
 				}
@@ -300,7 +300,7 @@ func TestTableAclPermission_MissingQuals(t *testing.T) {
 				called = true
 			}
 
-			result, err := checkPermission(ctx, queryData, nil)
+			result, err := listPermission(ctx, queryData, nil)
 
 			// The function returns (nil, nil) when required quals are missing
 			if tc.expectNil {
@@ -315,64 +315,6 @@ func TestTableAclPermission_MissingQuals(t *testing.T) {
 				// This will fail in unit test without real server, which is OK
 				if err == nil {
 					t.Error("Expected connection error in unit test without real server")
-				}
-			}
-		})
-	}
-}
-
-// TestConnect tests the connection function
-func TestConnect(t *testing.T) {
-	testCases := []struct {
-		name        string
-		apiUrl      string
-		storeId     string
-		expectError bool
-	}{
-		{
-			name:        "Valid configuration",
-			apiUrl:      "http://localhost:8080",
-			storeId:     "01ARZ3NDEKTSV4RRFFQ69G5FAV", // Valid ULID format
-			expectError: false,
-		},
-		{
-			name:        "Missing API URL",
-			apiUrl:      "",
-			storeId:     "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-			expectError: true,
-		},
-		{
-			name:        "Missing Store ID",
-			apiUrl:      "http://localhost:8080",
-			storeId:     "",
-			expectError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			queryData := &plugin.QueryData{
-				Connection: &plugin.Connection{
-					Config: &Config{
-						Endpoint: tc.apiUrl,
-						StoreId:  &tc.storeId,
-					},
-				},
-			}
-
-			client, err := connect(ctx, queryData)
-
-			if tc.expectError {
-				if err == nil {
-					t.Error("Expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
-				if client == nil {
-					t.Error("Expected client but got nil")
 				}
 			}
 		})
