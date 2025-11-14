@@ -1,5 +1,5 @@
-connection "acl" {
-    plugin = "local/carped99/acl"
+connection "openfga" {
+    plugin = "local/carped99/openfga"
 
     # OpenFGA API URL
     endpoint        = "openfga:8081"

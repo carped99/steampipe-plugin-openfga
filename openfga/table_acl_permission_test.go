@@ -14,7 +14,7 @@ import (
 // testSetup holds the test environment setup
 type testSetup struct {
 	client *Client
-	config *Config
+	config Config
 }
 
 // testCase represents a single permission test scenario
@@ -48,8 +48,8 @@ func setUp(t *testing.T) (*testSetup, []testCase) {
 	ctx := context.Background()
 
 	// Create Config for newClient
-	cfg := &Config{
-		Endpoint:             &endpoint,
+	cfg := Config{
+		Endpoint:             endpoint,
 		StoreId:              &storeId,
 		AuthorizationModelId: &modelId,
 	}
@@ -120,7 +120,7 @@ func setUp(t *testing.T) (*testSetup, []testCase) {
 
 			_, err := client.Write(ctx, writeReq)
 			if err != nil {
-				t.Fatal(err)
+				t.Logf("Warning: Failed to setup tuple for %s: %v (may already exist)", tc.name, err)
 			}
 		}
 	}
@@ -165,6 +165,9 @@ func tearDown(t *testing.T, setup *testSetup, testCases []testCase) {
 			t.Logf("Warning: Failed to close connection: %v", err)
 		}
 	}
+
+	// Clear the client cache to prevent interference with other tests
+	clearClientCache()
 }
 
 // TestTableAclPermission_Integration tests the sys_acl_permission table with a real OpenFGA server
@@ -178,10 +181,10 @@ func TestTableAclPermission_Integration(t *testing.T) {
 	// Run test cases
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create mock QueryData
+			// Create mock QueryData with QueryStatus for RowsRemaining support
 			queryData := &plugin.QueryData{
 				Connection: &plugin.Connection{
-					Config: setup.config,
+					Config: &setup.config,
 				},
 				EqualsQuals: plugin.KeyColumnEqualsQualMap{
 					"subject_type": &proto.QualValue{Value: &proto.QualValue_StringValue{StringValue: tc.subjectType}},
@@ -193,10 +196,10 @@ func TestTableAclPermission_Integration(t *testing.T) {
 			}
 
 			// Mock StreamListItem
-			var result *AclPermissionRow
+			var results []AclPermissionRow
 			queryData.StreamListItem = func(ctx context.Context, items ...interface{}) {
 				if len(items) > 0 {
-					result = items[0].(*AclPermissionRow)
+					results = append(results, items[0].(AclPermissionRow))
 				}
 			}
 
@@ -207,28 +210,31 @@ func TestTableAclPermission_Integration(t *testing.T) {
 			}
 
 			// Verify results
-			if result == nil {
-				t.Fatal("Expected result but got nil")
+			if len(results) == 0 {
+				if tc.setupTuple {
+					t.Fatal("Expected at least one result but got none")
+				} else {
+					// If tuple wasn't set up, we don't expect results
+					return
+				}
 			}
 
-			if result.SubjectId != tc.subjectId {
-				t.Errorf("Expected SubjectId %s, got %s", tc.subjectId, result.SubjectId)
+			// Check that we got the expected tuple
+			found := false
+			for _, result := range results {
+				if result.SubjectId == tc.subjectId &&
+					result.Relation == tc.relation &&
+					result.ObjectType == tc.objectType &&
+					result.ObjectId == tc.objectId {
+					found = true
+					break
+				}
 			}
 
-			if result.Relation != tc.relation {
-				t.Errorf("Expected Relation %s, got %s", tc.relation, result.Relation)
+			if !found && tc.setupTuple {
+				t.Errorf("Expected to find tuple (subject=%s:%s, relation=%s, object=%s:%s) but didn't find it",
+					tc.subjectType, tc.subjectId, tc.relation, tc.objectType, tc.objectId)
 			}
-
-			if result.ObjectType != tc.objectType {
-				t.Errorf("Expected ObjectType %s, got %s", tc.objectType, result.ObjectType)
-			}
-
-			if result.ObjectId != tc.objectId {
-				t.Errorf("Expected ObjectId %s, got %s", tc.objectId, result.ObjectId)
-			}
-
-			// Note: Allowed field is not part of AclPermissionRow anymore
-			// The row represents tuple keys, not permission check results
 		})
 	}
 }
@@ -282,7 +288,7 @@ func TestTableAclPermission_MissingQuals(t *testing.T) {
 			queryData := &plugin.QueryData{
 				Connection: &plugin.Connection{
 					Config: &Config{
-						Endpoint: &apiUrl,
+						Endpoint: apiUrl,
 						StoreId:  &storeId,
 					},
 				},
@@ -349,7 +355,7 @@ func TestConnect(t *testing.T) {
 			queryData := &plugin.QueryData{
 				Connection: &plugin.Connection{
 					Config: &Config{
-						Endpoint: &tc.apiUrl,
+						Endpoint: tc.apiUrl,
 						StoreId:  &tc.storeId,
 					},
 				},

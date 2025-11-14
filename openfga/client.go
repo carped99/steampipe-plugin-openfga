@@ -30,16 +30,21 @@ var (
 	clientCache sync.Map // map[string]*Client
 )
 
+// clearClientCache clears all cached clients (for testing)
+func clearClientCache() {
+	clientCache.Range(func(key, value interface{}) bool {
+		clientCache.Delete(key)
+		return true
+	})
+}
+
 func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 	connName := d.Connection.Name
 	if v, ok := clientCache.Load(connName); ok {
 		return v.(*Client), nil
 	}
 
-	cfg, err := getConfig(d.Connection)
-	if err != nil {
-		return nil, err
-	}
+	cfg := getConfig(d.Connection)
 
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -56,14 +61,10 @@ func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 	return client, nil
 }
 
-func newClient(ctx context.Context, cfg *Config) (*Client, error) {
-	// Extract endpoint from Endpoint
-	var endpoint string
-	if cfg.Endpoint != nil {
-		endpoint = *cfg.Endpoint
-	}
-	if endpoint == "" {
-		return nil, fmt.Errorf("api_url is required in connection config")
+func newClient(ctx context.Context, cfg Config) (*Client, error) {
+	// Validate endpoint
+	if cfg.Endpoint == "" {
+		return nil, fmt.Errorf("endpoint is required in connection config")
 	}
 
 	// Extract storeID
@@ -72,11 +73,11 @@ func newClient(ctx context.Context, cfg *Config) (*Client, error) {
 		storeID = *cfg.StoreId
 	}
 
+	// Configure dial options following gRPC best practices
+	// https://github.com/grpc/grpc-go/blob/master/Documentation/anti-patterns.md
 	dialOpts := []grpc.DialOption{
-		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(
-			// 큰 결과를 받을 수도 있으니 적당히 설정
-			grpc.MaxCallRecvMsgSize(16 * 1024 * 1024),
+			grpc.MaxCallRecvMsgSize(16 * 1024 * 1024), // 16MB max receive message size
 		),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                60 * time.Second,
@@ -85,17 +86,27 @@ func newClient(ctx context.Context, cfg *Config) (*Client, error) {
 		}),
 	}
 
-	// For now, use insecure credentials (can be enhanced later with TLS support)
-	dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Configure TLS/credentials
+	useTLS := false
+	if cfg.UseTLS != nil {
+		useTLS = *cfg.UseTLS
+	}
 
-	// Default timeout: 5 seconds
-	timeout := 5 * time.Second
-	dialCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	if useTLS {
+		// TLS configuration will be added here in the future
+		// For now, use insecure credentials
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	} else {
+		// Use insecure credentials for non-TLS connections
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
 
-	conn, err := grpc.DialContext(dialCtx, endpoint, dialOpts...)
+	// Use grpc.NewClient (recommended since v1.63.0)
+	// This performs NO I/O during construction - connections are established lazily
+	// Errors should be handled at RPC call time, not at dial time
+	conn, err := grpc.NewClient(cfg.Endpoint, dialOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial gRPC endpoint %q: %w", endpoint, err)
+		return nil, fmt.Errorf("failed to create gRPC client for endpoint %q: %w", cfg.Endpoint, err)
 	}
 
 	// Create OpenFGA service client

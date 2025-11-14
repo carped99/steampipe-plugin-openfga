@@ -21,13 +21,8 @@ func connect(ctx context.Context, d *plugin.QueryData) (*client.OpenFgaClient, e
 	storeId := os.Getenv("OPENFGA_STORE_ID")
 	authToken := os.Getenv("OPENFGA_AUTH_TOKEN")
 
-	config, err := getConfig(d.Connection)
-	if err != nil {
-		return nil, err
-	}
-	if config.Endpoint != nil {
-		apiUrl = *config.Endpoint
-	}
+	config := getConfig(d.Connection)
+	apiUrl = config.Endpoint
 	if config.StoreId != nil {
 		storeId = *config.StoreId
 	}
@@ -93,13 +88,8 @@ func connectGrpc(ctx context.Context, d *plugin.QueryData) (openfgav1.OpenFGASer
 	storeId := os.Getenv("OPENFGA_STORE_ID")
 	modelId := os.Getenv("OPENFGA_AUTHORIZATION_MODEL_ID")
 
-	config, err := getConfig(d.Connection)
-	if err != nil {
-		return nil, err
-	}
-	if config.Endpoint != nil {
-		apiUrl = *config.Endpoint
-	}
+	config := getConfig(d.Connection)
+	apiUrl = config.Endpoint
 	if config.StoreId != nil {
 		storeId = *config.StoreId
 	}
@@ -131,16 +121,13 @@ func connectGrpc(ctx context.Context, d *plugin.QueryData) (openfgav1.OpenFGASer
 		return nil, fmt.Errorf("invalid api_url format: %s (must start with http:// or https://)", apiUrl)
 	}
 
-	// Create gRPC connection
+	// Create gRPC connection following best practices
+	// https://github.com/grpc/grpc-go/blob/master/Documentation/anti-patterns.md
+	// grpc.NewClient performs no I/O - connections are established lazily
+	// Errors should be handled at RPC call time, not at dial time
 	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC connection: %w", err)
-	}
-
-	// Validate connection
-	if err := openfgainternal.ValidateConnection(ctx, conn); err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("failed to validate OpenFGA connection: %w", err)
 	}
 
 	// Create OpenFGA service client with adaptor

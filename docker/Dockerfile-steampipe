@@ -25,12 +25,7 @@ FROM ubuntu:24.04
 # 기본 도구 설치
 RUN apt-get update && apt-get install -y \
     build-essential \
-    rsync \
-    git \
-    wget \
-    curl \
-    ca-certificates \
-    gnupg \
+    rsync git wget curl vim ca-certificates gnupg \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 

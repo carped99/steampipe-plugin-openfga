@@ -1,7 +1,5 @@
-name: acl
+name: steampipe-openfga
 
 include:
   - ./database/docker-compose.yaml
   - ./openfga/docker-compose.yaml
-
-

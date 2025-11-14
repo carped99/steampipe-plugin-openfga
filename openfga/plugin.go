@@ -7,20 +7,18 @@ import (
 )
 
 func Plugin(ctx context.Context) *plugin.Plugin {
-	p := &plugin.Plugin{
-		Name:             "steampipe-plugin-acl",
+	return &plugin.Plugin{
+		Name:             "steampipe-plugin-openfga",
 		DefaultTransform: transform.FromGo().NullIfZero(),
 		//DefaultIgnoreConfig: &plugin.IgnoreConfig{
 		//	ShouldIgnoreErrorFunc: isNotFoundError,
 		//},
 		ConnectionConfigSchema: &plugin.ConnectionConfigSchema{
-			NewInstance: func() any {
-				return &Config{}
-			},
+			NewInstance: ConfigInstance,
+			//Schema:      ConfigSchema,
 		},
 		TableMap: map[string]*plugin.Table{
-			"sys_acl_permission": tableAclPermission(),
+			"sys_acl_permission": tableAclPermission(ctx),
 		},
 	}
-	return p
 }

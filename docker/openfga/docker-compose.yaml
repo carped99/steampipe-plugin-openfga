@@ -1,19 +1,17 @@
 services:
   migrate:
-    depends_on:
-      postgres:
-        condition: service_healthy
     image: openfga/openfga:latest
     command: migrate
     environment:
       - OPENFGA_DATASTORE_ENGINE=postgres
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   openfga:
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
     image: openfga/openfga:latest
+    command: run
     environment:
       - OPENFGA_DATASTORE_ENGINE=postgres
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
@@ -22,8 +20,15 @@ services:
       - OPENFGA_HTTP_CORS_ALLOWED_ORIGINS=*
       - OPENFGA_HTTP_CORS_ALLOWED_HEADERS=*
       - OPENFGA_HTTP_ADDR=0.0.0.0:8080
-    command: run
     ports:
       - "8080:8080" # http
       - "8081:8081" # grpc
       - "3000:3000" # playground
+    healthcheck:
+      test: [ "CMD", "/usr/local/bin/grpc_health_probe", "-addr=openfga:8081"]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

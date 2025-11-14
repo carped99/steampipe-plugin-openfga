@@ -6,7 +6,6 @@ import (
 	openfgav1 "github.com/carped99/steampipe-plugin-openfga/internal/openfga/gen/openfga/v1"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 	"strings"
 	"time"
 )
@@ -20,7 +19,7 @@ type AclPermissionRow struct {
 	CheckedAt   time.Time
 }
 
-func tableAclPermission() *plugin.Table {
+func tableAclPermission(_ context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "sys_acl_permission",
 		Description: "Real-time permission check via OpenFGA Check API",
@@ -75,16 +74,6 @@ func checkPermission(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 
 	var continuationToken string
 	for {
-		rowsRemaining := d.RowsRemaining(ctx)
-		if rowsRemaining == 0 {
-			break
-		}
-
-		pageSize := int32(rowsRemaining)
-		if pageSize > 100 {
-			pageSize = 100
-		}
-
 		request := &openfgav1.ReadRequest{
 			StoreId: client.storeID,
 			TupleKey: &openfgav1.ReadRequestTupleKey{
@@ -92,7 +81,7 @@ func checkPermission(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 				Object:   object,
 				Relation: relation,
 			},
-			PageSize:          wrapperspb.Int32(pageSize),
+			//PageSize:          wrapperspb.Int32(100),
 			ContinuationToken: continuationToken,
 		}
 

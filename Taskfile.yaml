@@ -6,22 +6,19 @@ tasks:
     cmds:
       - docker run --rm -v "{{.TASKFILE_DIR}}/internal/openfga:/workspace" -w /workspace bufbuild/buf generate
 
-  build:
+  steampipe:
+    desc: Run Docker steampipe image
+    deps: [ steampipe-build ]
+    cmds:
+      - docker compose -f "{{.ROOT_DIR}}/docker/docker-compose.yaml" up -d
+      - docker run --rm --network=steampipe-openfga_default -e STEAMPIPE_LOG_LEVEL=trace -it steampipe-openfga
+
+  steampipe-build:
+    internal: true
     desc: Build Docker steampipe image
     cmds:
-      - docker build -f "{{.ROOT_DIR}}/docker/Dockerfile-steampipe" -t steampipe-acl "{{.ROOT_DIR}}"
+      - docker build -f "{{.ROOT_DIR}}/docker/Dockerfile-steampipe" -t steampipe-openfga "{{.ROOT_DIR}}"
       - echo "✅ Docker image built successfully"
-
-  run:
-    desc: Run Docker steampipe image
-    deps: [ build ]
-    cmds:
-      - docker run --rm -it steampipe-acl
-
-  up:
-    desc: Run Docker steampipe image
-    cmds:
-      - docker compose -f "{{.ROOT_DIR}}/docker/steampipe-compose.yaml" up -d
 
   standalone:
     desc: Build standalone PostgreSQL FDW image
