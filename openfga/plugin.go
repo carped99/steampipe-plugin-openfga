@@ -15,7 +15,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		//},
 		ConnectionConfigSchema: &plugin.ConnectionConfigSchema{
 			NewInstance: func() any {
-				return &aclConfig{}
+				return &Config{}
 			},
 		},
 		TableMap: map[string]*plugin.Table{

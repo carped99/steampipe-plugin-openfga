@@ -1,6 +1,11 @@
 version: '3'
 
 tasks:
+  openfga:
+    desc: Generate the openfga module
+    cmds:
+      - docker run --rm -v "{{.TASKFILE_DIR}}/internal/openfga:/workspace" -w /workspace bufbuild/buf generate
+
   build:
     desc: Build Docker steampipe image
     cmds:

@@ -5,11 +5,11 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/schema"
 )
 
-type aclConfig struct {
-	ApiUrl               *string `hcl:"api_url"`
-	ApiToken             *string `hcl:"api_token"`
-	StoreId              *string `hcl:"store_id"`
-	AuthorizationModelId *string `hcl:"authorization_model_id"`
+type Config struct {
+	Endpoint             *string `hcl:"endpoint,required"`
+	ApiToken             *string `hcl:"api_token,optional"`
+	StoreId              *string `hcl:"store_id,required"`
+	AuthorizationModelId *string `hcl:"authorization_model_id,optional"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
@@ -27,13 +27,13 @@ var ConfigSchema = map[string]*schema.Attribute{
 	},
 }
 
-func getConfig(connection *plugin.Connection) *aclConfig {
+func getConfig(connection *plugin.Connection) (*Config, error) {
 	if connection == nil || connection.Config == nil {
-		return &aclConfig{}
+		return &Config{}, nil
 	}
-	config, ok := connection.Config.(*aclConfig)
+	config, ok := connection.Config.(*Config)
 	if !ok {
-		return &aclConfig{}
+		return &Config{}, nil
 	}
-	return config
+	return config, nil
 }
