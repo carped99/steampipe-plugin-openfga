@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	Endpoint           string  `hcl:"endpoint"`
-	UseTLS             *bool   `hcl:"use_tls"`              // 기본은 false (내부망)
-	CACertPath         *string `hcl:"ca_cert_path"`         // TLS 시 CA 경로
-	InsecureSkipVerify *bool   `hcl:"insecure_skip_verify"` // 필요시만
+	Endpoint           string  `hcl:"endpoint" env:"OPENFGA_ENDPOINT"`
+	UseTLS             *bool   `hcl:"use_tls" env:"OPENFGA_USE-TLS"`                           // 기본은 false (내부망)
+	CACertPath         *string `hcl:"ca_cert_path" env:"OPENFGA_CA-CERT-PATH"`                 // TLS 시 CA 경로
+	InsecureSkipVerify *bool   `hcl:"insecure_skip_verify" env:"OPENFGA_INSECURE-SKIP-VERIFY"` // 필요시만
 
-	ApiToken             *string `hcl:"api_token"`
-	StoreId              *string `hcl:"store_id"`
-	AuthorizationModelId *string `hcl:"authorization_model_id"`
+	ApiToken             *string `hcl:"api_token" env:"OPENFGA_API-TOKEN"`
+	StoreId              *string `hcl:"store_id" env:"OPENFGA_STORE-ID"`
+	AuthorizationModelId *string `hcl:"authorization_model_id" env:"OPENFGA_AUTHORIZATION-MODEL-ID"`
 }
 
 func ConfigInstance() any {

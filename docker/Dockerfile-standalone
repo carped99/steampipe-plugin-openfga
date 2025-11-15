@@ -1,10 +1,7 @@
-# syntax=docker/dockerfile:1.7
-# Steampipe ACL Plugin - Standalone PostgreSQL FDW
-
 # ------------------------------------------------------------
 # 1단계: steampipe-postgres-fdw + plugin 을 빌드하는 builder
 # ------------------------------------------------------------
-FROM ubuntu:24.04
+FROM ubuntu:24.04 as builder
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -24,7 +21,6 @@ RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz \
     && rm go${GO_VERSION}.linux-amd64.tar.gz
 ENV PATH=/usr/local/go/bin:$PATH
-
 
 WORKDIR /src
 

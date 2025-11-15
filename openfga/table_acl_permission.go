@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"time"
+
 	openfgav1 "github.com/carped99/steampipe-plugin-openfga/internal/openfga/gen/openfga/v1"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"io"
-	"time"
 )
 
 // (object_type, object_id, subject_type, subject_id, relation)
@@ -53,6 +54,16 @@ func tableAclPermission(_ context.Context) *plugin.Table {
 				{Name: relationCol, Require: plugin.Required},
 			},
 		},
+		Get: &plugin.GetConfig{
+			Hydrate: getPermission,
+			KeyColumns: plugin.AllColumns([]string{
+				objectTypeCol,
+				objectIDCol,
+				subjectTypeCol,
+				subjectIDCol,
+				relationCol,
+			}),
+		},
 		Columns: []*plugin.Column{
 			{Name: objectTypeCol, Type: proto.ColumnType_STRING, Description: "Logical type of the protected object"},
 			{Name: objectIDCol, Type: proto.ColumnType_STRING, Description: "Application-level identifier of the object"},
@@ -82,12 +93,14 @@ func listPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateD
 		return nil, fmt.Errorf("relation is required")
 	}
 
+	logger.Error("listPermission quals", "objectType", objectType, "objectId", objectId, "subjectType", subjectType, "subjectId", subjectId, "relation", relation)
+
 	hasObject := objectType != "" && objectId != ""
 	hasSubject := subjectType != "" && subjectId != ""
 	switch {
 	// 1) 단건 조회 - 모든 정보가 있을 때
 	case hasObject && hasSubject:
-		return check(ctx, d, objectType, objectId, subjectType, subjectId, relation)
+		return nil, errors.New("for single permission check, please use the 'get' call instead of 'list'")
 	// 2) subject 있음, object_id 값이 없음
 	case hasSubject && objectType != "":
 		return listObjects(ctx, d, objectType, subjectType, subjectId, relation)
@@ -97,6 +110,20 @@ func listPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateD
 	default:
 		return listByRead(ctx, d, objectType, objectId, subjectType, subjectId, relation)
 	}
+}
+
+func getPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (any, error) {
+	logger := plugin.Logger(ctx)
+	if logger.IsDebug() {
+		logger.Debug("listPermission called", "quals", d.EqualsQuals)
+	}
+
+	objectType := d.EqualsQualString(objectTypeCol)
+	objectId := d.EqualsQualString(objectIDCol)
+	subjectType := d.EqualsQualString(subjectTypeCol)
+	subjectId := d.EqualsQualString(subjectIDCol)
+	relation := d.EqualsQualString(relationCol)
+	return check(ctx, d, objectType, objectId, subjectType, subjectId, relation)
 }
 
 func listObjects(ctx context.Context, d *plugin.QueryData, objectType, subjectType, subjectID, relation string) (any, error) {
@@ -114,7 +141,7 @@ func listObjects(ctx context.Context, d *plugin.QueryData, objectType, subjectTy
 
 	res, err := client.StreamedListObjects(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("OpenFGA ListObjects: %w", err)
+		return nil, fmt.Errorf("ListObjects: %w", err)
 	}
 
 	for {
@@ -168,7 +195,7 @@ func listUsers(ctx context.Context, d *plugin.QueryData, objectType, objectID, s
 
 	res, err := client.ListUsers(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("OpenFGA ListUsers: %w", err)
+		return nil, fmt.Errorf("ListUsers: %w", err)
 	}
 
 	t := time.Now().UTC()
@@ -241,22 +268,22 @@ func check(ctx context.Context, d *plugin.QueryData, objectType, objectId, subje
 
 	res, err := client.Check(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("OpenFGA Check: %w", err)
+		return nil, fmt.Errorf("check: %w", err)
 	}
 
-	if res.GetAllowed() {
-		row := AclPermissionRow{
-			ObjectType:  objectType,
-			ObjectID:    objectId,
-			SubjectType: subjectType,
-			SubjectID:   subjectId,
-			Relation:    relation,
-			EvaluatedAt: time.Now().UTC(),
-		}
-		d.StreamListItem(ctx, row)
+	if !res.GetAllowed() {
+		return nil, nil
 	}
 
-	return nil, nil
+	return AclPermissionRow{
+		ObjectType:  objectType,
+		ObjectID:    objectId,
+		SubjectType: subjectType,
+		SubjectID:   subjectId,
+		Relation:    relation,
+		EvaluatedAt: time.Now().UTC(),
+	}, nil
+
 }
 
 // listByRead does not evaluate the tuples in the store.
@@ -304,7 +331,7 @@ func listByRead(ctx context.Context, d *plugin.QueryData, objectType, objectId, 
 
 		res, err := client.Read(ctx, req)
 		if err != nil {
-			return nil, fmt.Errorf("OpenFGA Read: %w", err)
+			return nil, fmt.Errorf("read: %w", err)
 		}
 
 		// ReadResponse.Tuples: []*Tuple
