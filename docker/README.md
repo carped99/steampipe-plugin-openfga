@@ -5,17 +5,64 @@ PostGIS 기반 PostgreSQL 이미지에 OpenFGA Foreign Data Wrapper extension이
 ## 빌드
 
 ```bash
-# 이미지 빌드
+# 1. 캐시를 사용한 빌드 (빠름, 개발용)
 task build
 
+# 2. make standalone부터 다시 빌드 (추천, 로컬 플러그인 변경 시)
+task build:fresh
+
+# 3. 완전히 새로 빌드 (모든 캐시 무시)
+task build:clean
+
 # 또는 직접 빌드
+# 일반 빌드 (캐시 사용)
 docker buildx build \
   --build-arg POSTGIS_TAG=17-3.5 \
   --platform linux/amd64 \
   -f docker/Dockerfile \
   -t gaia3d/gmr-postgis \
   .
+
+# make standalone부터 캐시 무시 (CACHEBUST로 무효화 지점 지정)
+docker buildx build \
+  --build-arg POSTGIS_TAG=17-3.5 \
+  --build-arg CACHEBUST=$(date +%s) \
+  --platform linux/amd64 \
+  -f docker/Dockerfile \
+  -t gaia3d/gmr-postgis \
+  .
+
+# 모든 캐시 무시
+docker buildx build --no-cache \
+  --build-arg POSTGIS_TAG=17-3.5 \
+  --platform linux/amd64 \
+  -f docker/Dockerfile \
+  -t gaia3d/gmr-postgis \
+  .
 ```
+
+**빌드 옵션:**
+- `task build` - 모든 캐시 사용 (빠름, 로컬 개발용)
+- `task build:fresh` - `make standalone`부터 다시 빌드 (추천, 로컬 플러그인 코드 변경 시)
+- `task build:clean` - 모든 캐시 무시하고 처음부터 빌드 (완전 클린 빌드)
+
+**캐시 무효화 범위:**
+```
+Dockerfile 레이어 순서:
+1. git clone steampipe-postgres-fdw
+2. go mod download
+3. apt-get install (fdw-builder)
+4. COPY Go binaries
+5. COPY steampipe-postgres-fdw source
+6. ← CACHEBUST 무효화 지점 (build:fresh)
+7. RUN make standalone ← 여기부터 재실행
+8. COPY extension files
+9. COPY init script
+```
+
+- `build` - 모든 캐시 사용 ✓ (1~9 모두 캐시)
+- `build:fresh` - CACHEBUST부터 무효화 ✗ (1~5 캐시, **6~9 재실행**)
+- `build:clean` - 모든 캐시 무시 ✗ (1~9 모두 재실행)
 
 ## 실행
 
@@ -118,6 +165,7 @@ CREATE DATABASE mydb TEMPLATE template_openfga;
 | `POSTGRES_USER` | `postgres` | PostgreSQL 사용자 |
 | `POSTGRES_PASSWORD` | - | PostgreSQL 비밀번호 (필수) |
 | `POSTGRES_DB` | `postgres` | 기본 데이터베이스 이름 |
+| `STEAMPIPE_LOG_LEVEL` | `WARN` | FDW 로그 레벨 (TRACE, DEBUG, INFO, WARN, ERROR) |
 
 ## 포트
 

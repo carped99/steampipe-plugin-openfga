@@ -5,12 +5,14 @@
 
 CREATE FUNCTION openfga_fdw_handler()
     RETURNS fdw_handler
-    AS 'openfga_fdw', 'fdw_handler'
+    AS 'MODULE_PATHNAME', 'steampipe_openfga_fdw_handler'
     LANGUAGE C STRICT;
 
 CREATE FUNCTION openfga_fdw_validator(text[], oid)
     RETURNS void
-    AS 'openfga_fdw', 'fdw_validator'
+    AS 'MODULE_PATHNAME', 'steampipe_openfga_fdw_validator'
     LANGUAGE C STRICT;
 
-CREATE FOREIGN DATA WRAPPER openfga_fdw HANDLER openfga_fdw_handler VALIDATOR openfga_fdw_validator;
+CREATE FOREIGN DATA WRAPPER openfga_fdw
+    HANDLER openfga_fdw_handler
+    VALIDATOR openfga_fdw_validator;

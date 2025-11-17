@@ -50,6 +50,10 @@ ARG PLUGIN_GITHUB_URL=github.com/carped99/steampipe-plugin-openfga
 
 ENV GOFLAGS="-trimpath -ldflags=-s -ldflags=-w"
 
+# Cache invalidation point: change CACHEBUST to rebuild from here
+ARG CACHEBUST=1
+RUN echo "Building FDW with CACHEBUST=${CACHEBUST}"
+
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     make standalone \
@@ -70,6 +74,6 @@ COPY extensions/openfga_fdw.control /usr/share/postgresql/${PG_MAJOR}/extension/
 COPY extensions/openfga_fdw--*.sql /usr/share/postgresql/${PG_MAJOR}/extension/
 
 # Copy initialization script to auto-install extension
-#COPY docker/initdb-openfga.sh /docker-entrypoint-initdb.d/10_openfga.sh
-#RUN chmod +x /docker-entrypoint-initdb.d/10_openfga.sh
+COPY docker/initdb-openfga.sh /docker-entrypoint-initdb.d/10_openfga.sh
+RUN chmod +x /docker-entrypoint-initdb.d/10_openfga.sh
 

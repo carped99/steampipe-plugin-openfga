@@ -37,6 +37,7 @@ tasks:
       - for: [15-3.5]
         cmd: > 
           docker buildx build --build-arg POSTGIS_TAG={{.ITEM}}
+          --build-arg CACHEBUST={{now | date "20060102150405"}}
           --platform linux/amd64 
           -f "{{.ROOT_DIR}}/docker/Dockerfile" 
           -t gaia3d/gmr-postgis 
