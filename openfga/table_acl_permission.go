@@ -93,8 +93,6 @@ func listPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateD
 		return nil, fmt.Errorf("relation is required")
 	}
 
-	logger.Error("listPermission quals", "objectType", objectType, "objectId", objectId, "subjectType", subjectType, "subjectId", subjectId, "relation", relation)
-
 	hasObject := objectType != "" && objectId != ""
 	hasSubject := subjectType != "" && subjectId != ""
 	switch {

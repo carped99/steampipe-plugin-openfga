@@ -7,12 +7,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: gmr
-      STEAMPIPE_LOG_LEVEL: ERROR
+      # Optional: Auto-create OpenFGA foreign server
+      OPENFGA_ENDPOINT: openfga:8081
+      OPENFGA_STORE_ID: 01KA0FSR3W39HES8PTRXA4PDYP
+      # OPENFGA_API_TOKEN: your-api-token-here
+      # OPENFGA_AUTHORIZATION_MODEL_ID: 01HXXXXXXXXXXXXXXXXXXXXX
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -35,6 +36,3 @@ services:
       interval: 5s
       timeout: 30s
       retries: 3
-
-volumes:
-  postgres_data:

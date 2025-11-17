@@ -84,6 +84,7 @@ docker run -d \
 
 1. `template_openfga` 템플릿 데이터베이스 생성
 2. `template_openfga`와 기본 데이터베이스에 `openfga_fdw` extension 설치
+3. (선택) 환경변수가 설정되어 있으면 기본 Foreign Server 자동 생성
 
 ## 사용 방법
 
@@ -106,18 +107,48 @@ WHERE name = 'openfga_fdw';
 
 ### 3. Foreign Server 생성
 
+**방법 1: 자동 생성 (환경변수 사용)**
+
+Docker Compose에서 환경변수를 설정하면 자동으로 생성됩니다:
+
+```yaml
+environment:
+  OPENFGA_ENDPOINT: openfga:8081                          # 필수
+  OPENFGA_STORE_ID: 01KA0FSR3W39HES8PTRXA4PDYP            # 필수
+  # OPENFGA_API_TOKEN: your-api-token                     # 선택사항
+  # OPENFGA_AUTHORIZATION_MODEL_ID: 01HXXXXXXXXXXXXXXXXXX # 선택사항
+```
+
+**방법 2: 수동 생성 (권장 - 프로덕션 환경)**
+
 ```sql
 -- OpenFGA 서버 연결 설정
 CREATE SERVER openfga_server
   FOREIGN DATA WRAPPER openfga_fdw
   OPTIONS (
-    endpoint 'openfga:8081',
-    store_id '01KA0FSR3W39HES8PTRXA4PDYP'
+    endpoint 'openfga:8081',                              -- 필수
+    store_id '01KA0FSR3W39HES8PTRXA4PDYP',                -- 필수
+    api_token 'your-api-token',                           -- 선택사항
+    authorization_model_id '01HXXXXXXXXXXXXXXXXXX'        -- 선택사항
   );
 
 -- User Mapping 생성
 CREATE USER MAPPING FOR postgres
   SERVER openfga_server;
+```
+
+**방법 3: 다중 서버 연결**
+
+```sql
+-- 개발 환경
+CREATE SERVER openfga_dev
+  FOREIGN DATA WRAPPER openfga_fdw
+  OPTIONS (endpoint 'localhost:8081', store_id '01DEV...');
+
+-- 프로덕션 환경
+CREATE SERVER openfga_prod
+  FOREIGN DATA WRAPPER openfga_fdw
+  OPTIONS (endpoint 'prod.openfga.com:8081', store_id '01PROD...');
 ```
 
 ### 4. Foreign Table Import
@@ -160,12 +191,25 @@ CREATE DATABASE mydb TEMPLATE template_openfga;
 
 ## 환경 변수
 
+### PostgreSQL 설정
+
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `POSTGRES_USER` | `postgres` | PostgreSQL 사용자 |
 | `POSTGRES_PASSWORD` | - | PostgreSQL 비밀번호 (필수) |
 | `POSTGRES_DB` | `postgres` | 기본 데이터베이스 이름 |
-| `STEAMPIPE_LOG_LEVEL` | `WARN` | FDW 로그 레벨 (TRACE, DEBUG, INFO, WARN, ERROR) |
+
+### OpenFGA FDW 설정
+
+| 변수 | 기본값 | 필수 | 설명 |
+|------|--------|------|------|
+| `STEAMPIPE_LOG_LEVEL` | `WARN` | ❌ | FDW 로그 레벨 (TRACE, DEBUG, INFO, WARN, ERROR) |
+| `OPENFGA_ENDPOINT` | - | ✅* | OpenFGA 서버 주소 (자동 서버 생성용) |
+| `OPENFGA_STORE_ID` | - | ✅* | OpenFGA Store ID (자동 서버 생성용) |
+| `OPENFGA_API_TOKEN` | - | ❌ | OpenFGA API 토큰 (인증 필요 시) |
+| `OPENFGA_AUTHORIZATION_MODEL_ID` | - | ❌ | Authorization Model ID (특정 모델 사용 시) |
+
+\* OPENFGA_ENDPOINT와 OPENFGA_STORE_ID는 자동 서버 생성을 원할 때만 필수입니다.
 
 ## 포트
 
