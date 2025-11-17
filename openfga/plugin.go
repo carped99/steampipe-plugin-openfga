@@ -8,7 +8,7 @@ import (
 
 func Plugin(ctx context.Context) *plugin.Plugin {
 	return &plugin.Plugin{
-		Name:             "steampipe-plugin-openfga",
+		Name:             "openfga_fdw",
 		DefaultTransform: transform.FromGo().NullIfZero(),
 		//DefaultIgnoreConfig: &plugin.IgnoreConfig{
 		//	ShouldIgnoreErrorFunc: isNotFoundError,

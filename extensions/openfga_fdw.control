@@ -1,0 +1,5 @@
+# openfga_fdw extension
+comment = 'OpenFGA Foreign Data Wrapper'
+default_version = '1.0'
+module_pathname = '$libdir/openfga_fdw.so'
+relocatable = true

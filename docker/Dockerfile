@@ -48,6 +48,8 @@ ARG PLUGIN_NAME=openfga
 ARG PLUGIN_VERSION="v0.0.1"
 ARG PLUGIN_GITHUB_URL=github.com/carped99/steampipe-plugin-openfga
 
+ENV GOFLAGS="-trimpath -ldflags=-s -ldflags=-w"
+
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     make standalone \
@@ -57,10 +59,17 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM postgis/postgis:${POSTGIS_TAG} AS runtime
 ARG PG_MAJOR
-COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga.so \
-  /usr/lib/postgresql/${PG_MAJOR}/lib/
-COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga.control \
-  /usr/share/postgresql/${PG_MAJOR}/extension/
-COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga--*.sql \
-  /usr/share/postgresql/${PG_MAJOR}/extension/
+
+# Copy FDW extension files
+COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga.so /usr/lib/postgresql/${PG_MAJOR}/lib/openfga_fdw.so
+#COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga.control /usr/share/postgresql/${PG_MAJOR}/extension/
+#COPY --from=fdw-builder /src/steampipe-postgres-fdw/build-Linux/steampipe_postgres_openfga--*.sql /usr/share/postgresql/${PG_MAJOR}/extension/
+
+# Copy extension metadata from local extensions directory
+COPY extensions/openfga_fdw.control /usr/share/postgresql/${PG_MAJOR}/extension/
+COPY extensions/openfga_fdw--*.sql /usr/share/postgresql/${PG_MAJOR}/extension/
+
+# Copy initialization script to auto-install extension
+#COPY docker/initdb-openfga.sh /docker-entrypoint-initdb.d/10_openfga.sh
+#RUN chmod +x /docker-entrypoint-initdb.d/10_openfga.sh
 
