@@ -115,7 +115,7 @@ func listPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateD
 func getPermission(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (any, error) {
 	logger := plugin.Logger(ctx)
 	if logger.IsDebug() {
-		logger.Debug("listPermission called", "quals", d.EqualsQuals)
+		logger.Debug("getPermission called", "quals", d.EqualsQuals)
 	}
 
 	objectType := d.EqualsQualString(objectTypeCol)
@@ -198,7 +198,7 @@ func listUsers(ctx context.Context, d *plugin.QueryData, objectType, objectID, s
 		return nil, fmt.Errorf("ListUsers: %w", err)
 	}
 
-	t := time.Now().UTC()
+	evaluatedAt := time.Now().UTC()
 	for _, user := range res.GetUsers() {
 		switch v := user.GetUser().(type) {
 		case *openfgav1.User_Object:
@@ -212,7 +212,7 @@ func listUsers(ctx context.Context, d *plugin.QueryData, objectType, objectID, s
 				SubjectType: obj.Type,
 				SubjectID:   obj.Id,
 				Relation:    relation,
-				EvaluatedAt: t,
+				EvaluatedAt: evaluatedAt,
 			}
 			d.StreamListItem(ctx, row)
 

@@ -1,0 +1,39 @@
+name: Build FDW and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        pg: [14, 15, 16, 17]  # 새 버전 나오면 여기만 추가
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build FDW for PostgreSQL ${{ matrix.pg }}
+        run: |
+          mkdir -p dist/pg${{ matrix.pg }}
+          docker buildx build \
+            --build-arg PG_MAJOR=${{ matrix.pg }} \
+            --output type=local,dest=dist/pg${{ matrix.pg }} \
+            -f Dockerfile \
+            .
+
+      - name: Pack artifact for PG${{ matrix.pg }}
+        run: |
+          cd dist/pg${{ matrix.pg }}
+          tar czf ../../steampipe-openfga-fdw-pg${{ matrix.pg }}-${GITHUB_REF_NAME}.tar.gz output
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: steampipe-openfga-fdw-pg${{ matrix.pg }}-${{ github.ref_name }}.tar.gz

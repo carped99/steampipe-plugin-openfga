@@ -23,12 +23,24 @@ tasks:
   standalone:
     desc: Build standalone PostgreSQL FDW image
     cmds:
-      - docker build -f "{{.ROOT_DIR}}/Dockerfile-standalone" -t steampipe-acl-fdw "{{.ROOT_DIR}}"
-      - echo "✅ Standalone FDW image built successfully"
-      - echo ""
-      - echo "To run:"
-      - echo "  task standalone:up"
-      - echo "  psql -h localhost -U steampipe -d steampipe"
+      - for: [14, 15, 16]
+        cmd: > 
+          docker buildx build 
+          --build-arg PG_MAJOR={{.ITEM}}
+          --platform linux/amd64,linux/arm64
+          --output type=local,dest=build 
+          -f "{{.ROOT_DIR}}/docker/Dockerfile-standalone" "{{.ROOT_DIR}}"
+
+  build:
+    desc: Build GMR PostgreSQL image
+    cmds:
+      - for: [15-3.5]
+        cmd: > 
+          docker buildx build --build-arg POSTGIS_TAG={{.ITEM}}
+          --platform linux/amd64 
+          -f "{{.ROOT_DIR}}/docker/Dockerfile" 
+          -t gaia3d/gmr-postgis 
+          "{{.ROOT_DIR}}"
 
 #  standalone:up:
 #    desc: Start standalone FDW stack with docker-compose
